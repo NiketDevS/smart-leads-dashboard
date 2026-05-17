@@ -4,12 +4,16 @@ import bcrypt from "bcryptjs";
 import User from "../models/User";
 import generateToken from "../utils/generateToken";
 
+import { registerSchema, loginSchema } from "../validations/auth.validation";
+
 export const registerUser = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
   try {
-    const { name, email, password, role } = req.body;
+    const validatedData = registerSchema.parse(req.body);
+
+    const { name, email, password, role } = validatedData;
 
     const existingUser = await User.findOne({ email });
 
@@ -42,17 +46,27 @@ export const registerUser = async (
         role: user.role,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.name === "ZodError") {
+      res.status(400).json({
+        message: "Validation Error",
+        errors: error.issues,
+      });
+
+      return;
+    }
+
     res.status(500).json({
       message: "Server Error",
-      error,
     });
   }
 };
 
 export const loginUser = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password } = req.body;
+    const validatedData = loginSchema.parse(req.body);
+
+    const { email, password } = validatedData;
 
     const user = await User.findOne({ email });
 
@@ -86,10 +100,18 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
         role: user.role,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.name === "ZodError") {
+      res.status(400).json({
+        message: "Validation Error",
+        errors: error.issues,
+      });
+
+      return;
+    }
+
     res.status(500).json({
       message: "Server Error",
-      error,
     });
   }
 };
